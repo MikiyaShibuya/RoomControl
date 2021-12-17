@@ -18,7 +18,7 @@
     {
       "accessory": "CMD",
       "name": "aircon",
-      "on_cmd": "python3 ~/RoomControl/irrp.py -p -g17 -f ~/RoomControl/codes aircon:26",
+      "on_cmd": "python3 ~/RoomControl/irrp.py -p -g17 -f ~/RoomControl/codes aircon:auto",
       "off_cmd": "python3 ~/RoomControl/irrp.py -p -g17 -f ~/RoomControl/codes aircon:off"
     },
     {
@@ -27,8 +27,6 @@
       "on_cmd": "python3 ~/RoomControl/hue_client.py -u ~/RoomControl/hue_user.txt -i 1",
       "off_cmd": "python3 ~/RoomControl/hue_client.py -u ~/RoomControl/hue_user.txt -i 0"
     }
-
-    
   ]
 }
 
