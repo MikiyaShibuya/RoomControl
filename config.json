@@ -22,19 +22,25 @@
             "accessories" :
             [
                 {
-                   "type": "Lightbulb",
-                   "displayName": "My_Dimmable_Light",
-                   "on":                       "FALSE",
-                   "brightness":                8,
-                   "hue":                       8,
-                   "saturation":                8,
-                   "colorTemperature":          8,
-                   "name":                     "My_Dimmable_Light",
-                   "manufacturer":             "Somebody",
-                   "model":                    "Anything",
-                   "serialNumber":             "12345",
-                   "stateChangeResponseTime":   3
-                   "State_cmd": "/home/pi/RoomControl/hue_client.py -u /home/pi/RoomControl/hue_user.txt -b 50"
+                    "type": "Lightbulb",
+                    "displayName": "Bed 3",
+                    "on": "FALSE",
+                    "brightness": 50,
+                    "name": "Bed 3",
+                    "manufacturer": "Advantage Air Australia",
+                    "model": "e-zone",
+                    "serialNumber": "Daikin e-zone",
+                    "stateChangeResponseTime":   3,
+                    "interval": 3,
+                    "polling": [
+                        {
+                            "characteristic": "on"
+                        },
+                        {
+                            "characteristic": "brightness"
+                        }
+                    ],
+                    "state_cmd":                "/home/pi/RoomControl/hue_client.py /home/pi/RoomControl/hue_user.txt"
                 },
                 {
                    "type":                     "HeaterCooler",
@@ -56,7 +62,33 @@
                    "model":                    "Anything",
                    "serialNumber":             "12345",
                    "stateChangeResponseTime":   3,
-                   "State_cmd":                "pyhton3 /home/homebridge/RoomControl/aircon.py"
+                   "polling": [
+                       {
+                           "Characteristic": "Active"
+                       },
+                       {
+                           "Characteristic": "TargetHeaterCoolerState"
+                       },
+                       {
+                           "Characteristic": "CoolingThresholdTemperature",
+                           "interval": 60
+                       },
+                       {
+                           "Characteristic": "HeatingThresholdTemperature",
+                           "interval": 60
+                       },
+                       {
+                           "Characteristic": "CurrentHeaterCoolerState"
+                       },
+                       {
+                           "Characteristic": "CurrentTemperature",
+                           "interval": 120
+                       },
+                       {
+                           "Characteristic": "RotationSpeed"
+                       }
+                   ],
+                   "state_cmd":                "/home/pi/RoomControl/aircon.py"
                 }
             ]
         }
