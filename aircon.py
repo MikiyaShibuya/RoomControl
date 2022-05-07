@@ -24,9 +24,6 @@ def set():
 
 if __name__ == "__main__":
 
-    # with open("/home/pi/RoomControl/test.txt", mode='a') as f:
-    #     f.write('aaa')
-
     act = sys.argv[1]
     tgt = sys.argv[2]
 

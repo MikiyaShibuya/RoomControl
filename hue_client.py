@@ -59,8 +59,10 @@ def set(base_url):
 if __name__ == "__main__":
 
     with open(sys.argv[1]) as f:
-        hue_user = f.read().splitlines()[0]
-    base_url = f'http://192.168.11.3/api/{hue_user}/groups/1/'
+        config = f.read().splitlines()
+        hue_user = config[0]
+        hue_url = config[1]
+    base_url = f'http://{hue_url}/api/{hue_user}/groups/1/'
 
     act = sys.argv[2]
     tgt = sys.argv[3]

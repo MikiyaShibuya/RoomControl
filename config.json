@@ -40,7 +40,7 @@
                             "characteristic": "brightness"
                         }
                     ],
-                    "state_cmd":                "/home/pi/RoomControl/hue_client.py /home/pi/RoomControl/hue_user.txt"
+                    "state_cmd":                "/home/pi/RoomControl/hue_client.py /home/pi/RoomControl/hue_config.txt"
                 },
                 {
                    "type":                     "HeaterCooler",
