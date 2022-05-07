@@ -6,10 +6,13 @@ After=syslog.target network-online.target
 Type=simple
 User=pi
 EnvironmentFile=/etc/default/homebridge
+
 # Adapt this to your specific setup (could be /usr/bin/homebridge)
 # See comments below for more information
 #ExecStart=/usr/local/bin/homebridge $HOMEBRIDGE_OPTS
-ExecStart=/home/pi/RoomControl/launch.sh
+ExecStart=/usr/local/bin/homebridge
+#ExecStart=/home/pi/RoomControl/launch.sh
+
 Restart=on-failure
 RestartSec=10
 KillMode=process
