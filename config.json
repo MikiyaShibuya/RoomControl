@@ -1,0 +1,64 @@
+{
+    "bridge": {
+        "name": "Homebridge E69E",
+        "username": "0E:6E:ED:ED:E6:9E",
+        "port": 51811,
+        "pin": "733-60-081",
+        "advertiser": "avahi"
+    },
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8581,
+            "platform": "config"
+        },
+        {
+            "platform":                       "Cmd4",
+            "name":                           "Cmd4",
+            "debug":                           false,
+            "allowTLV8":                       false,
+            "outputConstants":                 false,
+            "accessories" :
+            [
+                {
+                   "type": "Lightbulb",
+                   "displayName": "My_Dimmable_Light",
+                   "on":                       "FALSE",
+                   "brightness":                8,
+                   "hue":                       8,
+                   "saturation":                8,
+                   "colorTemperature":          8,
+                   "name":                     "My_Dimmable_Light",
+                   "manufacturer":             "Somebody",
+                   "model":                    "Anything",
+                   "serialNumber":             "12345",
+                   "stateChangeResponseTime":   3
+                   "State_cmd": "/home/pi/RoomControl/hue_client.py -u /home/pi/RoomControl/hue_user.txt -b 50"
+                },
+                {
+                   "type":                     "HeaterCooler",
+                   "displayName":              "My_HeaterCooler",
+                   "active":                   "ACTIVE",
+                   "currentHeaterCoolerState": "HEATING",
+                   "targetHeaterCoolerState":  "AUTO",
+                   "currentTemperature":        37.0,
+                   "lockPhysicalControls":     "CONTROL_LOCK_DISABLED",
+                   "name":                     "My_HeaterCooler",
+                   "swingMode":                "SWING_ENABLED",
+                   "coolingThresholdTemperature":
+                                                22.2,
+                   "heatingThresholdTemperature":
+                                                25.2,
+                   "temperatureDisplayUnits":  "CELSIUS",
+                   "rotationSpeed":             100,
+                   "manufacturer":             "Somebody",
+                   "model":                    "Anything",
+                   "serialNumber":             "12345",
+                   "stateChangeResponseTime":   3,
+                   "State_cmd":                "pyhton3 /home/homebridge/RoomControl/aircon.py"
+                }
+            ]
+        }
+    ]
+}
