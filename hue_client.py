@@ -4,71 +4,80 @@ import argparse
 import sys
 import json
 
+class HueClient:
+  def __init__(self, fn):
+    with open(fn) as f:
+      config = f.read().splitlines()
+      hue_user = config[0]
+      hue_url = config[1]
+    self.base_url = f'http://{hue_url}/api/{hue_user}/groups/1/'
+    self.table = [int(i / 100.0 * 254)for i in range(101)]
 
-def on_off(base_url, to_on):
-    api_url = base_url + 'action'
-    payload = {'on': to_on}
+  def set_on(self, on):
+    api_url = self.base_url + 'action'
+    payload = {'on': on}
+    res = requests.put(api_url, json=payload)
 
-    print(api_url, payload)
+  # Set birhgtness within 0 to 100 float value
+  def set_brightness(self, bri):
+    api_url = self.base_url + 'action'
+    bri = max(0, min(100, bri))
+    bri_in_hue = self.table[bri]
+    to_on = bri_in_hue != 0
+    payload = {'on': to_on, 'bri': bri_in_hue}
 
     res = requests.put(api_url, json=payload)
 
-
-def set_brightness(base_url, bri):
-    api_url = base_url + 'action'
-    brightness = int(max(0, min(254, bri * 254)))
-    to_on = brightness != 0
-    payload = {'on': to_on, 'bri': brightness}
-
-    print(api_url, payload)
-
-    res = requests.put(api_url, json=payload)
-    print(res)
-
-
-def get(base_url):
+  def get_on(self):
     payload = {}
-    res = requests.get(base_url, json=payload)
+    res = requests.get(self.base_url, json=payload)
+    data = json.loads(res.text)
+    return data['action']['on']
+    
+
+  # Get current brightness as [0 - 100]
+  def get_brightness(self):
+    payload = {}
+    res = requests.get(self.base_url, json=payload)
     data = json.loads(res.text)
 
-    key = sys.argv[4]
-    if key == "On": 
-        print(data['action']['on'])
-    elif key == "Brightness":
-        bri = int(data['action']['bri'])
-        print(int(bri / 254.0 * 100))
-
-    return 0
+    bri_in_hue = int(data['action']['bri'])
+    bri = self.table.index(bri_in_hue)
+    return bri
 
 
-def set(base_url):
+def main():
+  config = sys.argv[1]
 
-    key = sys.argv[4]
-    value = sys.argv[5]
+  # "Get" or "Set"
+  act = sys.argv[2]
+  # Target name
+  tgt = sys.argv[3]
+  # Key of value to be get/set
+  key = sys.argv[4]
 
-    if key == "On" and value == "0":
-        on_off(base_url, False)
-    elif key == "On" and value == "1":
-        on_off(base_url, True)
-    elif key == "Brightness":
-        set_brightness(base_url, int(value) / 100.0)
-    else:
-        print(f"unknown key: {key} - {value}")
+  hue_client = HueClient(config)
+
+  if act == 'Get':
+    if key == 'On':
+      is_on = hue_client.get_on()
+      print(is_on)
+      return 0
+    elif key == 'Brightness':
+      bri = hue_client.get_brightness()
+      print(bri)
+      return 0
+  elif act == 'Set':
+    if key == 'On':
+      value = sys.argv[5]
+      hue_client.set_on(value == '1')
+      return 0
+    elif key == 'Brightness':
+      value = int(sys.argv[5])
+      hue_client.set_brightness(value)
+      return 0
 
 
 if __name__ == "__main__":
-
-    with open(sys.argv[1]) as f:
-        config = f.read().splitlines()
-        hue_user = config[0]
-        hue_url = config[1]
-    base_url = f'http://{hue_url}/api/{hue_user}/groups/1/'
-
-    act = sys.argv[2]
-    tgt = sys.argv[3]
-
-    if act == 'Get':
-        get(base_url)
-    elif act == 'Set':
-        set(base_url)
+  main()
 
