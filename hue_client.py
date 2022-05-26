@@ -33,7 +33,7 @@ class HueClient:
     res = requests.get(self.base_url, json=payload)
     data = json.loads(res.text)
     return data['action']['on']
-    
+
 
   # Get current brightness as [0 - 100]
   def get_brightness(self):
