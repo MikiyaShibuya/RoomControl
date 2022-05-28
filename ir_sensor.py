@@ -18,11 +18,12 @@ class IR_Sensor:
 
   def _loop(self):
     while True:
-      det = GPIO.input(self.ir_pin)
+      # Inverted by level conversion
+      det = GPIO.input(self.ir_pin) == 0
 
       self.mutex.acquire()
       terminate = self.terminate
-      self.human = det > 0
+      self.human = det
       self.mutex.release()
 
       if terminate:
@@ -52,7 +53,7 @@ class IR_Sensor:
     self.mutex.release()
 
     return human
-    
+
 
 if __name__ == '__main__':
 

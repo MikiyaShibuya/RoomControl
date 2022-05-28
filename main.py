@@ -78,7 +78,7 @@ class HumanDetector:
     self.async_working = True
     self.mutex.release()
 
-    thread = threading.Thread(target=self._async_impl, args=(image, callback, make_preview))
+    thread = threading.Thread(target=self._async_impl, args=(image.copy(), callback, make_preview))
     thread.start()
 
 
@@ -126,26 +126,31 @@ if __name__ == '__main__':
       hue_client.set_on(False)
 
   while True:
-    _, frame = cam.read()
-    if frame is None:
-      continue
+    try:
+      _, frame = cam.read()
+      if frame is None:
+        continue
 
-    human_detector.check_human_async(frame, callback, make_preview=True)
+      human_detector.check_human_async(frame, callback, make_preview=True)
 
-    if ir_sensor.get():
-      res = slack_webhook.send_message(f'IR: in')
-      hue_client.set_on(True)
-      print(f'IR: in')
+      if ir_sensor.get():
+        res = slack_webhook.send_message(f'IR: in')
+        hue_client.set_on(True)
+        print(f'IR: in')
 
-    if gui_available:
-      mutex.acquire()
-      if preview is not None:
-        cv2.imshow('prev', cv2.hconcat([frame, preview]))
-      else:
-        cv2.imshow('prev', frame)
+      if gui_available:
+        mutex.acquire()
+        if preview is not None:
+          cv2.imshow('prev', cv2.hconcat([frame, preview]))
+        else:
+          cv2.imshow('prev', frame)
+        mutex.release()
+
+        key = cv2.waitKey(20)
+        if key == 113:
+          break
+    except:
       mutex.release()
+      break
 
-      key = cv2.waitKey(20)
-      if key == 113:
-        break
 

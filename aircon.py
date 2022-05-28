@@ -14,11 +14,11 @@ def set():
     value = sys.argv[4]
 
     if key == 'Active' and value == '1':
-        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g17', '-f', '/home/pi/RoomControl/codes', 'aircon:auto'])
+        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g2', '-f', '/home/pi/RoomControl/codes', 'aircon:auto'])
     elif key == 'Active' and value == '0':
-        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g17', '-f', '/home/pi/RoomControl/codes', 'aircon:off'])
+        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g2', '-f', '/home/pi/RoomControl/codes', 'aircon:off'])
     else:
-        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g17', '-f', '/home/pi/RoomControl/codes', 'aircon:auto'])
+        subprocess.run(['python3', '/home/pi/RoomControl/irrp.py', '-p', '-g2', '-f', '/home/pi/RoomControl/codes', 'aircon:auto'])
 
 
 
@@ -31,6 +31,4 @@ if __name__ == "__main__":
         get()
     elif act == 'Set':
         set()
-
-        
 
