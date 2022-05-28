@@ -1,0 +1,13 @@
+[Unit]
+Description=xkeysnail key mapping service
+
+[Service]
+KillMode=process
+WorkingDirectory=%h/RoomControl/
+ExecStart=/usr/bin/python3 stay_checker.py slack_uri.txt hue_config.txt
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=default.target
+
