@@ -5,52 +5,52 @@ import time
 import threading
 
 class IR_Sensor:
-  def __init__(self):
-    self.ir_pin = 4
-    self.thread = None
-    self.mutex = threading.Lock()
-    self.human = False
+  def __init__(self, interval=0.5):
+    self._ir_pin = 4
+    self._mutex = threading.Lock()
+    self._human = False
 
-    self.terminate = True
+    self._terminate = True
+    self._interval = interval
 
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(self.ir_pin, GPIO.IN)
+    GPIO.setup(self._ir_pin, GPIO.IN)
 
   def _loop(self):
     while True:
       # Inverted by level conversion
-      det = GPIO.input(self.ir_pin) == 0
+      det = GPIO.input(self._ir_pin) == 0
 
-      self.mutex.acquire()
-      terminate = self.terminate
-      self.human = det
-      self.mutex.release()
+      self._mutex.acquire()
+      terminate = self._terminate
+      self._human = self._human or det
+      self._mutex.release()
 
       if terminate:
         break
 
-      time.sleep(0.5)
+      time.sleep(self._interval)
 
   def start(self):
-    self.mutex.acquire()
-    if not self.terminate:
+    self._mutex.acquire()
+    if not self._terminate:
         return
-    self.terminate = False
-    self.mutex.release()
+    self._terminate = False
+    self._mutex.release()
 
     thread = threading.Thread(target=self._loop)
     thread.start()
 
   def stop(self):
-    self.mutex.acquire()
-    self.terminate = True
-    self.mutex.release()
+    self._mutex.acquire()
+    self._terminate = True
+    self._mutex.release()
 
   def get(self):
-    self.mutex.acquire()
-    human = self.human
-    self.human = False
-    self.mutex.release()
+    self._mutex.acquire()
+    human = self._human
+    self._human = False
+    self._mutex.release()
 
     return human
 
@@ -67,3 +67,4 @@ if __name__ == '__main__':
     print(det)
 
     time.sleep(1)
+

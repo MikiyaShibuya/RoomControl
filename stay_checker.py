@@ -12,94 +12,104 @@ from slack_webhook import SlackWebhook
 from hue_client import HueClient
 from ir_sensor import IR_Sensor
 
-AWAY_TIMEOUT = 10*60 # The room will be assumed empty when the detector keeping find no-one for this time
-CAPTURE_INTERVAL = 1.0 # Camera captureing period [s]
-INFER_INTERVAL = 60.0 # Human detection period [s]
+AWAY_TIMEOUT = 10 * 60.0 # The room will be assumed empty when the detector keeping find no-one for this time
+INFER_INTERVAL = 1 * 60.0 # Human detection period [s]
+CONTROL_INTERVAL = 0.3 # Interval of control [s]
+
+DEBUG = False
+
+if DEBUG:
+  INFER_INTERVAL = 10.0
+  AWAY_TIMEOUT = 60
 
 class HumanDetector:
-  def __init__(self, timeout=3 * 60):
+  def __init__(self, interval=1 * 60, make_preview=False):
+    self.cam = cv2.VideoCapture(0)
+    self.cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    if not self.cam.isOpened():
+      print("Camera couldn't bt opened")
+      exit(1)
+
     classFile = 'coco.names'
     modelWeights = 'yolov5n.onnx'
     self.yolo = YOLO_V5(classFile, modelWeights)
-
-    self.prev_with_human = False
-    self.time_human_left = 0
-    self.current_state = 'out'
-
-    self.timeout = timeout # 10 min
+    self.interval = interval
+    self.make_preview = make_preview
 
     self.mutex = threading.Lock()
-    self.async_working = False
-    self.async_result = None
+    self.ts = 0
+    self.human = False
+    self.prev = None
+    self.terminate = True
 
-  def check_human(self, image, make_preview=False):
-    outputs = self.yolo.infer(frame)
-    prev = None
-    if make_preview:
-      prev = self.yolo.draw_bboxes(frame.copy(), outputs)
+  def _loop(self):
+    while True:
+      t0 = time.time()
+      det = False
 
-    with_human = False
-    state_changed = False
+      frame = None
+      while time.time() - t0 < 0.1:
+        r, f = self.cam.read()
+        if r:
+          frame = f
 
-    for i in outputs[0]:
-      if i == 0:
-        with_human = True
+      if frame is None:
+        continue
+
+      outputs = self.yolo.infer(frame)
+
+      for i in outputs[0]:
+        if i == 0:
+          det = True
+
+      prev = None
+      if self.make_preview:
+        prev = self.yolo.draw_bboxes(frame.copy(), outputs)
+        prev = cv2.hconcat([frame, prev])
+
+      if DEBUG:
+        print(f'debug: obj-det: {det}')
+
+      self.mutex.acquire()
+      terminate = self.terminate
+      self.ts = t0
+      self.human = det
+      self.prev = prev
+      self.mutex.release()
+
+      if terminate:
         break
 
-    if with_human:
-      if not self.prev_with_human:
-        if self.current_state != 'in':
-          state_changed = True
-        self.current_state = 'in'
-    else:
-      if self.prev_with_human:
-        self.time_human_left = time.time()
+      t1 = time.time()
+      if t1 - t0 < self.interval:
+        time.sleep(self.interval - (t1 - t0))
 
-      elapsed = time.time() - self.time_human_left
-      if elapsed > self.timeout:
-        if self.current_state != 'out':
-          state_changed = True
-        self.current_state = 'out'
-
-    self.prev_with_human = with_human
-
-    return self.current_state if state_changed else '', prev
-
-  def _async_impl(self, image, make_preview):
-    detection, prev = self.check_human(image, make_preview)
-
+  def start(self):
     self.mutex.acquire()
-    self.async_result = (detection, prev)
-    self.async_working = False
+    if not self.terminate:
+        return
+    self.terminate = False
     self.mutex.release()
 
-  def check_human_async(self, image, make_preview=False):
-    self.mutex.acquire()
-    async_working = self.async_working
-    self.mutex.release()
-    if async_working:
-      return
-
-    self.mutex.acquire()
-    self.async_working = True
-    self.mutex.release()
-
-    thread = threading.Thread(target=self._async_impl, args=(image.copy(), make_preview))
+    thread = threading.Thread(target=self._loop)
     thread.start()
 
-  def is_working(self):
+  def stop(self):
     self.mutex.acquire()
-    working = self.async_working
-    self.mutex.release()
-    return working
-
-  def pop_result(self):
-    self.mutex.acquire()
-    res = self.async_result
-    self.async_result = None
+    self.terminate = True
     self.mutex.release()
 
-    return res
+  def get(self):
+    self.mutex.acquire()
+    ts = self.ts
+    human = self.human
+    prev = self.prev
+    self.ts = 0
+    self.human = False
+    self.prev = None
+    self.mutex.release()
+
+    return ts, human, prev
 
 
 if __name__ == '__main__':
@@ -107,20 +117,16 @@ if __name__ == '__main__':
   slack_uri_fn = sys.argv[1]
   hue_config_fn = sys.argv[2]
 
-  human_detector = HumanDetector(AWAY_TIMEOUT)
   slack_webhook = SlackWebhook(slack_uri_fn)
   hue_client = HueClient(hue_config_fn)
-  ir_sensor = IR_Sensor()
 
   gui_available = False
 
   if os.getenv('DISPLAY') != '':
     try:
-      cv2.namedWindow('prev', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
       cv2.namedWindow('infer', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 
       dummy = np.zeros((480, 640), np.uint8)
-      cv2.imshow('prev', dummy)
       cv2.imshow('infer', dummy)
       cv2.waitKey(1000)
       gui_available = True
@@ -131,55 +137,50 @@ if __name__ == '__main__':
   if not gui_available:
     print('Start with headless mode')
 
-  cam = cv2.VideoCapture(0)
+  last_human_det_time = 0
+  staying = False
 
-  last_infer_req = 0
-
-  if not cam.isOpened():
-    print("Camera couldn't bt opened")
-    exit(1)
-
+  human_detector = HumanDetector(INFER_INTERVAL, gui_available)
+  ir_sensor = IR_Sensor()
   ir_sensor.start()
 
   while True:
     try:
-      _, frame = cam.read()
-      if frame is None:
-        continue
+      current_time = time.time()
 
-      res = human_detector.pop_result()
-      prev = None
+      ts, cam_det, prev = human_detector.get()
+      ir_det = ir_sensor.get()
 
-      if res is not None:
-        detection = res[0]
-        prev = res[1]
-        if detection != '':
-          res = slack_webhook.send_message(f'camera: {detection}')
-          print(f'camera: {detection}')
+      if DEBUG and ir_det:
+        print('debug: ir_det')
 
-        if detection == 'out':
-          hue_client.set_on(False)
-
-      if not human_detector.is_working() \
-          and time.time() - last_infer_req > INFER_INTERVAL:
-        human_detector.check_human_async(frame, make_preview=True)
-        last_infer_req = time.time()
-
-      if ir_sensor.get():
-        res = slack_webhook.send_message(f'IR: in')
-        hue_client.set_on(True)
-        print(f'IR: in')
+      if staying:
+        if cam_det or ir_det:
+          last_human_det_time = current_time
+        else:
+          if current_time - last_human_det_time > AWAY_TIMEOUT:
+            staying = False
+            hue_client.set_on(False)
+            human_detector.stop()
+            slack_webhook.send_message('out');
+            print('out');
+      # Not staying
+      else:
+        if ir_det:
+          staying = True
+          hue_client.set_on(True)
+          human_detector.start()
+          slack_webhook.send_message('in');
+          print('in');
 
       if gui_available:
-        cv2.imshow('prev', frame)
         if prev is not None:
           cv2.imshow('infer', prev)
+          key = cv2.waitKey(1)
+          if key == 113:
+            break
 
-        key = cv2.waitKey(int(CAPTURE_INTERVAL * 1000))
-        if key == 113:
-          break
-      else:
-        time.sleep(CAPTURE_INTERVAL)
+      time.sleep(CONTROL_INTERVAL)
 
     except:
       import traceback
@@ -187,4 +188,5 @@ if __name__ == '__main__':
       break
 
   ir_sensor.stop()
+  human_detector.stop()
 
